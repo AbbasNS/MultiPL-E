@@ -33,7 +33,7 @@ def run(
     timeout_seconds: int = 15,
     max_output_size: int = 2048,
     env = None,
-    cwd: str | None = None
+    cwd = None
 ) -> Result:
     """
     Runs the given program with arguments. After the timeout elapses, kills the process

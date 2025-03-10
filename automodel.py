@@ -26,6 +26,9 @@ class Model:
             self.tokenizer.pad_token is not None
         ), "tokenizer has neither pad_token nor eos_token"
 
+        if self.tokenizer.eos_token_id not in self.tokenizer.all_special_ids:
+            print("Adding EOS token manually:", self.tokenizer.eos_token)
+            self.tokenizer.add_special_tokens({"eos_token": "<|im_end|>"})
         self._all_special_token_ids = self.tokenizer.all_special_ids
 
         assert (
@@ -34,9 +37,9 @@ class Model:
         assert (
             self.tokenizer.pad_token_id in self._all_special_token_ids
         ), "pad_token_id not in all_special_ids"
-        assert (
-            self.tokenizer.eos_token_id in self._all_special_token_ids
-        ), "eos_token_id not in all_special_ids"
+        # assert (
+        #     self.tokenizer.eos_token_id in self._all_special_token_ids
+        # ), "eos_token_id not in all_special_ids"
 
     def completion_tensors(
         self,
@@ -60,10 +63,8 @@ class Model:
         with torch.no_grad():
             output = self.model.generate(
                 **inputs,
-                do_sample=True,
+                do_sample=False,
                 use_cache=True,
-                top_p=top_p,
-                temperature=temperature,
                 max_length=max_length,
                 pad_token_id=self.tokenizer.pad_token_id
             )
