@@ -26,9 +26,6 @@ class Model:
             self.tokenizer.pad_token is not None
         ), "tokenizer has neither pad_token nor eos_token"
 
-        if self.tokenizer.eos_token_id not in self.tokenizer.all_special_ids:
-            print("Adding EOS token manually:", self.tokenizer.eos_token)
-            self.tokenizer.add_special_tokens({"eos_token": "<|im_end|>"})
         self._all_special_token_ids = self.tokenizer.all_special_ids
 
         assert (
@@ -102,22 +99,28 @@ class Model:
         )
         return list(right_specials_removed)
 
+    # In the decode_single_output method:
     def decode_single_output(self, output_tensor, prompt):
-        output_token_ids = self._remove_padding_and_stop_at_special_tokens(
-            output_tensor.tolist()
-        )
-        detok_hypo_str = self.tokenizer.decode(
-            output_token_ids,
+        # Get full output
+        full_output = self.tokenizer.decode(
+            output_tensor.tolist(),
             clean_up_tokenization_spaces=False,
-            skip_special_tokens=False,
+            skip_special_tokens=True,  # Change to True to skip special tokens like <|im_end|>
         )
-        # Skip the prompt (which may even have stop_tokens)
-        return detok_hypo_str[len(prompt) :]
+        
+        # Find where the assistant's response begins
+        assistant_marker = "Assistant: "
+        if assistant_marker in full_output:
+            response_start = full_output.find(assistant_marker) + len(assistant_marker)
+            return full_output[response_start:]
+        elif prompt in full_output:
+            return full_output[len(prompt):]
+        else:
+            return full_output
 
     def completions(
         self, prompts: str, max_tokens: int, temperature: float, top_p, stop
     ):
-        prompts = [prompt.strip() for prompt in prompts]
         output_tensors = self.completion_tensors(
             prompts,
             max_tokens,
