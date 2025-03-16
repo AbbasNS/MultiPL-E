@@ -11,9 +11,23 @@ from typing import List
 class Model:
     def __init__(self, name, revision, model_kwargs, tokenizer_name=None, tokenizer_revision=None):
         dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        # Check for multiple GPUs
+        num_gpus = torch.cuda.device_count()
+        if num_gpus > 1:
+            print(f"Found {num_gpus} GPUs, distributing model across devices")
+            device_map = "auto"
+        else:
+            device_map = None
+        # Load model with device_map for automatic distribution across GPUs
         self.model = AutoModelForCausalLM.from_pretrained(
-            name, revision=revision, torch_dtype=dtype, trust_remote_code=True, **model_kwargs
-        ).cuda()
+            name, 
+            revision=revision, 
+            torch_dtype=dtype, 
+            trust_remote_code=True, 
+            device_map=device_map,
+            **model_kwargs
+        )
+
         self.tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_name or name,
             revision=tokenizer_revision or revision,
@@ -54,8 +68,11 @@ class Model:
             return_token_type_ids=False,
             truncation=True,
             max_length=max_length - 1,
-        ).to("cuda")
+        )
 
+        # Get the appropriate device - for multi-GPU setups, this ensures inputs go to the right device
+        device = next(self.model.parameters()).device
+        inputs = {k: v.to(device) for k, v in inputs.items()}
 
         with torch.no_grad():
             output = self.model.generate(

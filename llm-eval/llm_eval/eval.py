@@ -46,8 +46,6 @@ def main():
     with open(args.jsonl_input, "r") as f:
         original_prompts = [json.loads(line)["prompt"] for line in f]
 
-    # Keep only a limited number of prompts for testing if needed
-    original_prompts = original_prompts[:8]
     
     # Format prompts for instruction mode rather than completion mode
     prompts = []
