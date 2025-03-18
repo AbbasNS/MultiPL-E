@@ -8,12 +8,6 @@ PROMPT_TEMPLATE = """Generate a self-contained compilable Java class that implem
 {method_signature}
 ```
 
-Use the following imports if needed:
-
-```java
-{imports}
-```
-
 Ensure the implementation is clean, efficient, and follows Java best practices.
 Implement helper methods if necessary to keep the code modular.
 Output only the complete Java class content, with no additional explanations.
@@ -21,12 +15,6 @@ Output only the complete Java class content, with no additional explanations.
 
 def generate_prompt(entry):
     """Generates a prompt by filling in details from the JSON entry."""
-    method_signature = entry.get("method_signature", "").strip()
-    return_type = "void"
-    if method_signature:
-        parts = method_signature.split()
-        if len(parts) > 2:
-            return_type = parts[1]
 
     method_signature = entry.get("method_signature")
     prompt = entry.get("prompt").strip()
@@ -36,7 +24,7 @@ def generate_prompt(entry):
     return PROMPT_TEMPLATE.format(
         prompt=prompt,
         method_signature=method_signature,
-        imports=imports
+        #imports=imports
     )
 
 def process_json(input_file, output_file):
@@ -52,6 +40,6 @@ def process_json(input_file, output_file):
     print(f"Generated {len(data)} prompts and saved to {output_file}")
 
 if __name__ == "__main__":
-    input_json_file = "./dataset/ComplexCodeEval-Java.json"
+    input_json_file = "./ComplexCodeEval-Java.json"
     output_jsonl_file = "output.jsonl"
     process_json(input_json_file, output_jsonl_file)
