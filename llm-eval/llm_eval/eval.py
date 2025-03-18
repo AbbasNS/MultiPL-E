@@ -35,6 +35,10 @@ def main():
     parser.add_argument("--jsonl-input", type=str, required=True, help="Path to input JSONL file containing prompts.")
     parser.add_argument("--output-dir", type=str, required=True, help="Directory to save the output JSON file.")
     parser.add_argument("--batch-size", type=int, default=8, help="Batch size for processing prompts")
+    parser.add_argument("--start-index", type=int, default=0, help="Starting index of prompts to process")
+    parser.add_argument("--end-index", type=int, default=None, help="Ending index (exclusive) of prompts to process")
+    parser.add_argument("--shard-count", type=int, default=1, help="Total number of shards to split evaluation into")
+    parser.add_argument("--shard-index", type=int, default=0, help="Index of the current shard (0-based)")
     args = parser.parse_args()
 
     # Load the model
@@ -46,14 +50,29 @@ def main():
     with open(args.jsonl_input, "r") as f:
         original_prompts = [json.loads(line)["prompt"] for line in f]
 
+        
+    total_prompts = len(original_prompts)
+    if args.shard_count > 1:
+        shard_size = total_prompts // args.shard_count
+        start_idx = args.shard_index * shard_size
+        end_idx = start_idx + shard_size if args.shard_index < args.shard_count - 1 else total_prompts
+        print(f"Processing shard {args.shard_index+1}/{args.shard_count}: prompts {start_idx}-{end_idx-1}")
+    else:
+        # Use explicit start/end indices if specified
+        start_idx = args.start_index
+        end_idx = args.end_index if args.end_index is not None else total_prompts
     
+    #Select the subset of prompts to process
+    original_prompts = original_prompts[start_idx:end_idx]
+    print(f"Selected {len(original_prompts)} prompts to process (indices {start_idx}-{end_idx-1})")
+
     # Format prompts for instruction mode rather than completion mode
     prompts = []
     for prompt in original_prompts:
         # Simple format without specific chat markers
         instruction_formatted = f"System: You are an expert coding assistant. Generate code based on the given instructions.\n\nUser: {prompt}\n\nAssistant: "
         prompts.append(instruction_formatted)
-    
+
     # Calculate max_tokens for each prompt
     max_tokens_list = [get_max_tokens(prompt, model) for prompt in prompts]
     
@@ -108,7 +127,8 @@ def main():
     # Write results to JSON file
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "completions.json")
+    range_suffix = f"_{start_idx}-{end_idx-1}"
+    output_path = os.path.join(output_dir, f"completions{range_suffix}.json")
     
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2)

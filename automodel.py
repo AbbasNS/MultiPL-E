@@ -75,13 +75,24 @@ class Model:
         inputs = {k: v.to(device) for k, v in inputs.items()}
 
         with torch.no_grad():
-            output = self.model.generate(
-                **inputs,
-                do_sample=False,
-                use_cache=True,
-                max_length=max_length,
-                pad_token_id=self.tokenizer.pad_token_id
-            )
+            if temperature > 0.0:
+                output = self.model.generate(
+                    **inputs,
+                    do_sample=True,
+                    use_cache=True,
+                    max_length=max_length,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+            else:
+                output = self.model.generate(
+                    **inputs,
+                    do_sample=False,
+                    use_cache=True,
+                    max_length=max_length,
+                    pad_token_id=self.tokenizer.pad_token_id
+                )
         return output
 
     def _is_normal_token_id(self, token_id: int) -> bool:
