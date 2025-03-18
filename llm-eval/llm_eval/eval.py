@@ -48,7 +48,9 @@ def main():
     # Read prompts from JSONL file
     print(f"Reading prompts from: {args.jsonl_input}")
     with open(args.jsonl_input, "r") as f:
-        original_prompts = [json.loads(line)["prompt"] for line in f]
+        jsonl_data = [json.loads(line) for line in f]
+        original_prompts = [item["prompt"] for item in jsonl_data]
+        prompt_ids = [item["id"] for item in jsonl_data]
 
         
     total_prompts = len(original_prompts)
@@ -64,6 +66,7 @@ def main():
     
     #Select the subset of prompts to process
     original_prompts = original_prompts[start_idx:end_idx]
+    prompt_ids = prompt_ids[start_idx:end_idx]
     print(f"Selected {len(original_prompts)} prompts to process (indices {start_idx}-{end_idx-1})")
 
     # Format prompts for instruction mode rather than completion mode
@@ -116,16 +119,19 @@ def main():
     
     # Create results with original prompts and completions
     results = []
-    for orig_prompt, completion in zip(original_prompts, all_completions):
+    for i, (orig_prompt, completion) in enumerate(zip(original_prompts, all_completions)):
         java_start = "```java"
         java_end = "```"
-        if java_start in completion and java_end in completion.split(java_start, 1)[1]:
-            # extract the ```java ...``` part
-            processed_c = completion.split(java_start, 1)[1].split(java_end, 1)[0].strip()
-        else:
-            # If extraction fails, keep the full completion
-            processed_c = completion.strip()
+        processed_c = completion
+        if java_start in processed_c:
+            # Extract Java code block from completion
+            processed_c = processed_c.split(java_start, 1)[1]
+            if java_end in processed_c:
+                processed_c = processed_c.split(java_end, 1)[0]
+            
+        processed_c = processed_c.strip()
         results.append({
+            "id": prompt_ids[i],
             "prompt": orig_prompt,
             "completion": processed_c
         })
