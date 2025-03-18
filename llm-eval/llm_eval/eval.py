@@ -117,8 +117,14 @@ def main():
     # Create results with original prompts and completions
     results = []
     for orig_prompt, completion in zip(original_prompts, all_completions):
-        # extract the ```java ...``` part
-        processed_c = completion.split("```java")[1].split("```")[0].strip()
+        java_start = "```java"
+        java_end = "```"
+        if java_start in completion and java_end in completion.split(java_start, 1)[1]:
+            # extract the ```java ...``` part
+            processed_c = completion.split(java_start, 1)[1].split(java_end, 1)[0].strip()
+        else:
+            # If extraction fails, keep the full completion
+            processed_c = completion.strip()
         results.append({
             "prompt": orig_prompt,
             "completion": processed_c
