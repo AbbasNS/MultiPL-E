@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 from automodel import Model
 from tqdm import tqdm
 
-def get_max_tokens(prompt, model, buffer=50):
+def compute_max_tokens(prompt, model, buffer=50):
     # Get model's context length from its configuration
     model_context_length = model.model.config.max_position_embeddings
     
@@ -39,6 +39,7 @@ def main():
     parser.add_argument("--end-index", type=int, default=None, help="Ending index (exclusive) of prompts to process")
     parser.add_argument("--shard-count", type=int, default=1, help="Total number of shards to split evaluation into")
     parser.add_argument("--shard-index", type=int, default=0, help="Index of the current shard (0-based)")
+    parser.add_argument("--max-tokens", type=int, default=None, help="Maximum number of tokens to generate for each prompt, if not specified, will be calculated based on model's context length.")
     args = parser.parse_args()
 
     # Load the model
@@ -77,7 +78,7 @@ def main():
         prompts.append(instruction_formatted)
 
     # Calculate max_tokens for each prompt
-    max_tokens_list = [get_max_tokens(prompt, model) for prompt in prompts]
+    max_tokens_list = [args.max_tokens if args.max_tokens else compute_max_tokens(prompt, model) for prompt in prompts]
     
     # Create simple batches without reordering
     batch_size = args.batch_size
